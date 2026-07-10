@@ -9,6 +9,6 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY checker.py accounts.txt ./
+COPY main.py accounts.txt ./
 
-CMD ["python", "checker.py"]
+CMD ["python", "main.py"]
