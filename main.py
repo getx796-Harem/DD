@@ -1,50 +1,44 @@
 import requests
 import time
 import json
-import undetected_chromedriver as uc
+from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import re
+from selenium.webdriver.chrome.options import Options
 
 # ================== 🔥 ตั้งค่า ==================
 SESSION_ID = "d9c5d8c81b3012339001b6ffea85abcdaeeb10806a7891568086c70cb854084"
 WEBHOOK_URL = "https://discord.com/api/webhooks/1525105752497324072/TU7mNMV_qhmXwuwcooDrJPH8i50YOM4qCny55kI4dko9u-ZN65I6-QQsuJ0n8NtrEGSy"  # 👈 เปลี่ยนเป็นของคุณ
 
 def get_captcha_token():
-    """ใช้ undetected-chromedriver ดึง captcha_token"""
-    options = uc.ChromeOptions()
+    options = Options()
     options.add_argument("--headless")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,1080")
+    options.binary_location = "/usr/bin/chromium"
     
     driver = None
     try:
-        driver = uc.Chrome(options=options, version_main=None)
+        driver = webdriver.Chrome(options=options)
         driver.get("https://beta-pb.com")
-        
-        # รอให้ JavaScript โหลด
-        wait = WebDriverWait(driver, 15)
+        wait = WebDriverWait(driver, 10)
         
         token = None
-        
-        # หา token ใน input
         try:
             elem = wait.until(EC.presence_of_element_located((By.NAME, "captcha_token")))
             token = elem.get_attribute("value")
         except:
             pass
         
-        # หา token ใน JavaScript
         if not token:
             try:
                 token = driver.execute_script("return window.captcha_token || ''")
             except:
                 pass
         
-        # หา token ใน data attribute
         if not token:
             try:
                 elem = driver.find_element(By.CSS_SELECTOR, "[data-captcha-token]")
@@ -53,9 +47,8 @@ def get_captcha_token():
                 pass
         
         return token
-        
     except Exception as e:
-        print(f"   ⚠️ Error: {e}")
+        print(f"   ⚠️ get_captcha_token error: {e}")
         return None
     finally:
         if driver:
@@ -121,7 +114,6 @@ def send_embed(username, password, profile):
 def main():
     print("🚀 เริ่มตรวจสอบบัญชี...")
     
-    # ดึง captcha_token
     print("🔍 กำลังดึง captcha_token...")
     captcha_token = get_captcha_token()
     if not captcha_token:
