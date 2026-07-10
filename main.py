@@ -9,7 +9,7 @@ from selenium.webdriver.chrome.options import Options
 
 # ================== 🔥 ตั้งค่า ==================
 SESSION_ID = "d9c5d8c81b3012339001b6ffea85abcdaeeb10806a7891568086c70cb854084"
-WEBHOOK_URL = "https://discord.com/api/webhooks/1525105752497324072/TU7mNMV_qhmXwuwcooDrJPH8i50YOM4qCny55kI4dko9u-ZN65I6-QQsuJ0n8NtrEGSy"  # 👈 เปลี่ยนเป็นของคุณ
+WEBHOOK_URL = "https://discord.com/api/webhooks/1525105752497324072/TU7mNMV_qhmXwuwcooDrJPH8i50YOM4qCny55kI4dko9u-ZN65I6-QQsuJ0n8NtrEGSy"  # 👈 เปลี่ยน
 
 def get_captcha_token():
     options = Options()
@@ -39,16 +39,9 @@ def get_captcha_token():
             except:
                 pass
         
-        if not token:
-            try:
-                elem = driver.find_element(By.CSS_SELECTOR, "[data-captcha-token]")
-                token = elem.get_attribute("data-captcha-token")
-            except:
-                pass
-        
         return token
     except Exception as e:
-        print(f"   ⚠️ get_captcha_token error: {e}")
+        print(f"   ⚠️ Error: {e}")
         return None
     finally:
         if driver:
