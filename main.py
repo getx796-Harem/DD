@@ -11,11 +11,10 @@ from selenium.webdriver.chrome.options import Options
 SESSION_ID = "d9c5d8c81b3012339001b6ffea85abcdaeeb10806a7891568086c70cb854084"
 WEBHOOK_URL = "https://discord.com/api/webhooks/1525105752497324072/TU7mNMV_qhmXwuwcooDrJPH8i50YOM4qCny55kI4dko9u-ZN65I6-QQsuJ0n8NtrEGSy"  # 👈 เปลี่ยนเป็นของคุณ
 
-# URL ของ Selenium Standalone Chrome Service (เปลี่ยนเป็น URL ของคุณ)
-SELENIUM_URL = "http://selenium-standalone-chrome.railway.internal:4444/wd/hub"
+# 🔥 เปลี่ยนเป็น URL ที่ได้จาก Railway (Generate Domain)
+SELENIUM_URL = "https://selenium-standalone-chrome.up.railway.app/wd/hub"
 
 def get_captcha_token():
-    """ใช้ Remote WebDriver เชื่อมต่อ Selenium Service"""
     options = Options()
     options.add_argument("--headless")
     options.add_argument("--no-sandbox")
@@ -24,7 +23,7 @@ def get_captcha_token():
     
     driver = None
     try:
-        # เชื่อมต่อกับ Selenium Service
+        print(f"   🔗 Connecting to Selenium: {SELENIUM_URL}")
         driver = webdriver.Remote(
             command_executor=SELENIUM_URL,
             options=options
@@ -33,8 +32,6 @@ def get_captcha_token():
         wait = WebDriverWait(driver, 15)
         
         token = None
-        
-        # หา captcha_token จาก input
         try:
             elem = wait.until(EC.presence_of_element_located((By.NAME, "captcha_token")))
             token = elem.get_attribute("value")
@@ -43,7 +40,6 @@ def get_captcha_token():
         except:
             pass
         
-        # หาใน JavaScript
         try:
             token = driver.execute_script("return window.captcha_token || ''")
             if token:
@@ -51,17 +47,7 @@ def get_captcha_token():
         except:
             pass
         
-        # หาใน meta/data attribute
-        try:
-            elem = driver.find_element(By.CSS_SELECTOR, "[data-captcha-token]")
-            token = elem.get_attribute("data-captcha-token")
-            if token:
-                return token
-        except:
-            pass
-        
         return None
-        
     except Exception as e:
         print(f"   ⚠️ get_captcha_token error: {e}")
         return None
